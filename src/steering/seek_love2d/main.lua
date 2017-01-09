@@ -4,15 +4,14 @@ local vector = require('vendor/vector')
 local Mob = Object:extend()
 
 function Mob:new ()
-  local width, height = love.graphics.getDimensions()
-
   self.width = 30
   self.height = 30
   self.pos = vector(10, 10)
   self.vel = vector(0, 0)
   self.acc = vector(0, 0)
-  self.maxVelocity = 350
-  self.maxSeekForce = 100
+  self.maxVelocity = 10
+  self.maxSeekForce = 0.1
+  self.approachRadius = 80
   self.color = {
     r = 2,
     g = 217,
@@ -54,23 +53,47 @@ function Mob:followMouse ()
 end
 
 function Mob:seek (target)
-  self.desired = (target - self.pos):normalized() * self.maxVelocity
+  self.desired = (target - self.pos)
+  self.desired:normalizeInplace()
+  self.desired = self.desired * self.maxVelocity
 
-  local steer = self.desired - self.vel
+  local steer = (self.desired - self.vel)
 
   if steer:len() > self.maxSeekForce then
-    steer = steer:normalized() * self.maxSeekForce
+    steer = steer:trimmed(self.maxSeekForce)
+  end
+
+  return steer
+end
+
+function Mob:seekWithApproach (target)
+  self.desired = (target - self.pos)
+
+  local distance = self.desired:len()
+
+  self.desired:normalizeInplace()
+
+  if distance < self.approachRadius then
+    self.desired = self.desired * distance / self.approachRadius * self.maxVelocity
+  else
+    self.desired = self.desired * self.maxVelocity
+  end
+
+  local steer = (self.desired - self.vel)
+
+  if steer:len() > self.maxSeekForce then
+    steer = steer:trimmed(self.maxSeekForce)
   end
 
   return steer
 end
 
 function Mob:update (dt)
-  self.acc = self:seek(vector(love.mouse.getPosition()))
+  self.acc = self:seekWithApproach(vector(love.mouse.getPosition()))
   self.vel = self.vel + self.acc * dt
 
   if self.vel:len() > self.maxVelocity then
-    self.vel = self.vel:normalized() * self.maxVelocity
+    self.vel = self.vel:trimmed(self.maxVelocity)
   end
 
   self.pos = self.pos + self.vel * dt
@@ -79,20 +102,28 @@ end
 
 function Mob:draw ()
   local center = self:getCenter()
+  local mx, my = love.mouse.getPosition()
 
   love.graphics.setColor(self.color.r, self.color.g, self.color.b)
   love.graphics.rectangle('fill', self.pos.x, self.pos.y, self.width, self.height)
 
   -- debug lines
   love.graphics.setLineWidth(2)
+
   -- velocity
   love.graphics.setColor(32, 144, 204)
   love.graphics.line(center.x, center.y, center.x + self.vel.x, center.y + self.vel.y)
+
   -- desired
   if self.desired then
     love.graphics.setColor(68, 214, 250)
     love.graphics.line(center.x, center.y, center.x + self.desired.x, center.y + self.desired.y)
   end
+
+  -- approach radius
+  love.graphics.setLineWidth(1)
+  love.graphics.setColor(236, 94, 103)
+  love.graphics.circle('line', mx, my, self.approachRadius)
 end
 
 local mob = nil
