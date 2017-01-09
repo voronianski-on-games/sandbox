@@ -9,9 +9,9 @@ function Mob:new ()
   self.pos = vector(10, 10)
   self.vel = vector(0, 0)
   self.acc = vector(0, 0)
-  self.maxVelocity = 10
-  self.maxSeekForce = 0.1
-  self.approachRadius = 80
+  self.maxVelocity = 150
+  self.maxSeekForce = 300
+  self.approachRadius = 150
   self.color = {
     r = 2,
     g = 217,
