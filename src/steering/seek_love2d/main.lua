@@ -48,7 +48,8 @@ function Mob:checkBounds ()
 end
 
 function Mob:followMouse ()
-  mpos = vector(love.mouse.getPosition())
+  local mpos = vector(love.mouse.getPosition())
+
   return (mpos - self.pos):normalized()
 end
 
@@ -89,12 +90,11 @@ function Mob:seekWithApproach (target)
 end
 
 function Mob:update (dt)
-  print(dt)
   self.acc = self:seekWithApproach(vector(love.mouse.getPosition()))
   self.vel = self.vel + self.acc * dt
 
   if self.vel:len() > self.maxVelocity then
-    self.vel = self.vel:trimmed(self.maxVelocity)
+    self.vel = self.vel * self.maxVelocity
   end
 
   self.pos = self.pos + self.vel * dt
