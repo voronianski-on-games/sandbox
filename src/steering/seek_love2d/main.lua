@@ -9,8 +9,8 @@ function Mob:new ()
   self.pos = vector(10, 10)
   self.vel = vector(0, 0)
   self.acc = vector(0, 0)
-  self.maxVelocity = 150
-  self.maxSeekForce = 300
+  self.maxVelocity = 300
+  self.maxSeekForce = 6
   self.approachRadius = 150
   self.color = {
     r = 2,
@@ -60,7 +60,7 @@ function Mob:seek (target)
   local steer = (self.desired - self.vel)
 
   if steer:len() > self.maxSeekForce then
-    steer = steer:trimmed(self.maxSeekForce)
+    steer = steer * self.maxSeekForce
   end
 
   return steer
@@ -82,13 +82,14 @@ function Mob:seekWithApproach (target)
   local steer = (self.desired - self.vel)
 
   if steer:len() > self.maxSeekForce then
-    steer = steer:trimmed(self.maxSeekForce)
+    steer = steer * self.maxSeekForce
   end
 
   return steer
 end
 
 function Mob:update (dt)
+  print(dt)
   self.acc = self:seekWithApproach(vector(love.mouse.getPosition()))
   self.vel = self.vel + self.acc * dt
 
