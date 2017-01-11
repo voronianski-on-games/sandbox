@@ -2,23 +2,24 @@ local Object = require('vendor/object')
 local vector = require('vendor/vector')
 
 local debug = true
+local wanderType = 'random' -- 'improved' or 'random'
 local ww, wh = love.graphics.getDimensions()
+
 local Mob = Object:extend()
 
 function Mob:new ()
   self.width = 30
   self.height = 30
-  self.pos = vector(math.random(0, ww), math.random(0, wh))
-  self.vel = vector(0, 0)
-  self.acc = vector(0, 0)
+  self.pos = vector(love.math.random(ww), love.math.random(wh))
   self.maxVelocity = 150
-  self.maxSeekForce = 20
-  self.target = vector(math.random(0, ww), math.random(0, wh))
+  self.vel = vector(self.maxVelocity, 0):rotated(love.math.random(360))
+  self.acc = vector(0, 0)
+  self.maxSeekForce = 200
+  self.target = vector(love.math.random(ww), love.math.random(wh))
   self.targetLived = 0
   self.targetLifeTime = 0.5
-  self.wanderRingDistance = 150
-  self.wanderRingRadius = 60
-  self.wanderType = 'improved'
+  self.wanderRingDistance = 300
+  self.wanderRingRadius = 150
   self.color = {
     r = 2,
     g = 217,
@@ -52,20 +53,11 @@ function Mob:checkBounds ()
   end
 end
 
-function Mob:followMouse ()
-  local mpos = vector(love.mouse.getPosition())
-
-  return (mpos - self.pos):normalized()
-end
-
 function Mob:seek (target)
-  self.desired = (target - self.pos):normalized() * self.maxVelocity
+  self.desiredVelocity = (target - self.pos):normalized() * self.maxVelocity
 
-  local steer = (self.desired - self.vel)
-
-  if steer:len() > self.maxSeekForce then
-    steer = steer * self.maxSeekForce
-  end
+  local steer = (self.desiredVelocity - self.vel)
+  steer:trimInplace(self.maxSeekForce)
 
   return steer
 end
@@ -75,7 +67,7 @@ function Mob:wander (dt)
 
   if self.targetLived > self.targetLifeTime then
     self.targetLived = 0
-    self.target = vector(math.random(0, ww), math.random(0, wh))
+    self.target = vector(love.math.random(ww), love.math.random(wh))
   end
 
   return self:seek(self.target)
@@ -83,27 +75,26 @@ end
 
 function Mob:wanderImproved ()
   local circlePosition = self.pos + self.vel:normalized() * self.wanderRingDistance
-  local target = circlePosition + vector(self.wanderRingRadius, 0):rotated(math.random(0, 360))
+  local targetOnRing = circlePosition + vector(self.wanderRingRadius, 0):rotated(love.math.random(360))
 
-  self.displacement = target
+  self.displacement = targetOnRing
 
-  return self:seek(target)
+  return self:seek(targetOnRing)
 end
 
 function Mob:update (dt)
-  if self.wanderType == 'random' then
+  if wanderType == 'random' then
     self.acc = self:wander(dt)
   else
     self.acc = self:wanderImproved()
   end
 
+  print(1, self.acc)
+
   self.vel = self.vel + self.acc * dt
-
-  if self.vel:len() > self.maxVelocity then
-    self.vel = self.vel * self.maxVelocity
-  end
-
+  self.vel:trimInplace(self.maxVelocity)
   self.pos = self.pos + self.vel * dt
+
   self:checkBounds()
 end
 
@@ -130,12 +121,12 @@ function Mob:drawDebug ()
   love.graphics.line(center.x, center.y, center.x + self.vel.x, center.y + self.vel.y)
 
   -- desired
-  if self.desired then
-    love.graphics.setColor(68, 214, 250)
-    love.graphics.line(center.x, center.y, center.x + self.desired.x, center.y + self.desired.y)
+  if self.desiredVelocity then
+    love.graphics.setColor(236, 94, 103)
+    love.graphics.line(center.x, center.y, center.x + self.desiredVelocity.x, center.y + self.desiredVelocity.y)
   end
 
-  if self.wanderType == 'random' then
+  if wanderType == 'random' then
     love.graphics.setColor(244, 217, 66)
     love.graphics.circle('fill', self.target.x, self.target.y, 5)
   else
